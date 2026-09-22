@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --color-paper: #fbfaf7;
+  --color-ink: #1c1b18;
+  --color-muted: #6b675e;
+  --color-rule: #e4e0d6;
+  --color-accent: #2d5b9a;
+  --color-accent-soft: #e8eff8;
+  --color-cited: #f4ecd6;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.article {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.article p + p {
+  margin-top: 1rem;
+}

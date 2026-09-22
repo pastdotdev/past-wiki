@@ -1,0 +1,29 @@
+# Seeds the wiki's past project from a folder in this repository, on demand.
+#
+# Set the repository secret PAST_API_KEY (a project key) and, if you self-host past, the
+# repository variable PAST_BASE_URL. Then run this workflow from the Actions tab, naming the
+# folder to push. Re-running it only reprocesses the notes that changed.
+name: seed
+
+on:
+  workflow_dispatch:
+    inputs:
+      folder:
+        description: Folder of Markdown or text notes to push
+        default: sample
+        required: true
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run seed -- "${{ inputs.folder }}"
+        env:
+          PAST_API_KEY: ${{ secrets.PAST_API_KEY }}
+          PAST_BASE_URL: ${{ vars.PAST_BASE_URL }}
