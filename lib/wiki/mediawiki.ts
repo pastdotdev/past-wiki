@@ -265,6 +265,7 @@ interface ApiError {
 /** Attempts per call. Sites answer 429 in bursts; waiting them out is the whole strategy. */
 const RETRIES = 8;
 const MAX_BACKOFF_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 async function apiGet<T>(api: string, params: Record<string, string>, options: FetchOptions): Promise<T> {
   const fetchImpl = options.fetch ?? fetch;
@@ -276,7 +277,10 @@ async function apiGet<T>(api: string, params: Record<string, string>, options: F
   for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
     let waitMs = Math.min(MAX_BACKOFF_MS, 2000 * 2 ** (attempt - 1));
     try {
-      const response = await fetchImpl(url, { headers: { "User-Agent": options.userAgent ?? DEFAULT_USER_AGENT } });
+      const response = await fetchImpl(url, {
+        headers: { "User-Agent": options.userAgent ?? DEFAULT_USER_AGENT },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
       if (response.status === 429 || response.status >= 500) {
         const retryAfter = Number(response.headers.get("retry-after"));
         if (Number.isFinite(retryAfter) && retryAfter > 0) waitMs = Math.max(waitMs, retryAfter * 1000);
