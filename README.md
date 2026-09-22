@@ -58,6 +58,33 @@ npm run seed -- ./docs --no-wait    # push and return without waiting
 first half of 2026 with a few decisions that change over time. Delete the folder once you have
 your own.
 
+### Seeding from a MediaWiki site
+
+`npm run mediawiki -- <site> <folder>` exports every article of a MediaWiki site (Wikipedia,
+Fandom, any wiki with an `api.php`) into a folder the seed can push. This is how the public
+copy at [wiki.past.dev](https://wiki.past.dev) was filled: the whole
+[One Piece Wiki](https://onepiece.fandom.com), 8,000 articles, a subject with more lore than a
+language model keeps straight.
+
+```sh
+npm run mediawiki -- https://onepiece.fandom.com ./onepiece            # every article
+npm run mediawiki -- https://en.wikipedia.org ./wp --limit 50          # a taste
+npm run mediawiki -- https://onepiece.fandom.com ./onepiece --concurrency 6
+npm run seed -- ./onepiece --no-wait
+```
+
+- **One article, one note.** The file is named after the title, subpages become subfolders,
+  and the front matter carries the `title:`, the `date:` of the last revision, the article's
+  `source:` URL and its `revision:` id.
+- **Only the text.** Navigation boxes, reference lists, images and links are dropped; past
+  bills by the byte and none of them answer a question. Infoboxes become a list of their
+  fields, tables stay tables.
+- **Re-run it to catch up.** An article whose revision has not moved is skipped, so a second
+  export fetches only what changed, and the seed after it pushes only those files.
+
+The export is for a project of your own: the wiki's text stays under its site's license
+(CC-BY-SA for Wikipedia and Fandom), so keep the source line and do not commit the folder.
+
 ### Seeding from GitHub Actions
 
 `.github/workflows/seed.yml` runs the same script on demand. In your fork, add the repository
@@ -99,7 +126,7 @@ on the server.
 ```sh
 npm run typecheck   # tsc, strict
 npm run lint
-npm test            # vitest: the ask flow, citation parsing, history, the seed
+npm test            # vitest: the ask flow, citation parsing, history, the seed, the MediaWiki export
 npm run build
 ```
 
@@ -114,8 +141,9 @@ app/
   api/ask/route.ts    # the one server route (holds the key)
 components/           # Wiki (state + URL), AskBar, Sidebar, Article, Sources
 lib/past/             # typed client for /answer, /recall and /ingest/batch
-lib/wiki/             # ask (answer-or-evidence), page model, history, config, seed
+lib/wiki/             # ask (answer-or-evidence), page model, history, config, seed, mediawiki
 scripts/seed.ts       # npm run seed
+scripts/mediawiki.ts  # npm run mediawiki
 sample/               # notes to seed a fresh project with
 tests/
 ```

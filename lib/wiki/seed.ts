@@ -15,6 +15,9 @@ export const NOTE_EXTENSIONS = new Set([".md", ".markdown", ".txt"]);
 /** Points per push. Well under the API's limit; keeps one failed push small. */
 export const PUSH_SIZE = 200;
 
+/** Content bytes per push: half the API's 16 MB batch cap, so long notes never trip it. */
+export const PUSH_BYTES = 8 * 1024 * 1024;
+
 export interface Note {
   /** Path relative to the seeded folder, with forward slashes. Becomes the data point id. */
   path: string;
@@ -89,12 +92,31 @@ export interface SeedSummary {
   ingestionIds: string[];
 }
 
-/** Pushes the items in order, PUSH_SIZE at a time. */
+/** Cuts the items, in order, where the next one would exceed PUSH_SIZE or PUSH_BYTES. */
+export function batches(items: IngestItem[]): IngestItem[][] {
+  const result: IngestItem[][] = [];
+  let current: IngestItem[] = [];
+  let bytes = 0;
+  for (const item of items) {
+    const size = Buffer.byteLength(item.content, "utf8");
+    if (current.length > 0 && (current.length >= PUSH_SIZE || bytes + size > PUSH_BYTES)) {
+      result.push(current);
+      current = [];
+      bytes = 0;
+    }
+    current.push(item);
+    bytes += size;
+  }
+  if (current.length > 0) result.push(current);
+  return result;
+}
+
+/** Pushes the items in order, one batch at a time. */
 export async function pushItems(client: PastClient, items: IngestItem[]): Promise<SeedSummary> {
   if (PUSH_SIZE > MAX_PUSH_ITEMS) throw new Error("PUSH_SIZE exceeds the API limit");
   const summary: SeedSummary = { pushed: items.length, changed: 0, unchanged: 0, ingestionIds: [] };
-  for (let start = 0; start < items.length; start += PUSH_SIZE) {
-    const response = await client.push({ items: items.slice(start, start + PUSH_SIZE) });
+  for (const batch of batches(items)) {
+    const response = await client.push({ items: batch });
     const unchanged = response.items.filter((item) => item.unchanged).length;
     summary.unchanged += unchanged;
     summary.changed += response.items.length - unchanged;

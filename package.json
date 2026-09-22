@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
+    "mediawiki": "tsx scripts/mediawiki.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run"
@@ -19,14 +20,17 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@joplin/turndown-plugin-gfm": "^1.0.68",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/turndown": "^5.0.6",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
+    "turndown": "^7.2.4",
     "typescript": "^5.9.3",
     "vitest": "^5.0.0"
   }

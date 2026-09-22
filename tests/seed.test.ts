@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PastClient } from "@/lib/past/client";
-import { PUSH_SIZE, noteTitle, parseFrontMatter, pushItems, toIngestItem, waitSettled } from "@/lib/wiki/seed";
+import { PUSH_BYTES, PUSH_SIZE, batches, noteTitle, parseFrontMatter, pushItems, toIngestItem, waitSettled } from "@/lib/wiki/seed";
 
 const FALLBACK = new Date("2026-01-01T00:00:00Z");
 
@@ -103,6 +103,21 @@ describe("pushItems", () => {
 
     expect(summary).toEqual({ pushed: PUSH_SIZE + 1, changed: PUSH_SIZE - 1, unchanged: 2, ingestionIds: ["push-1", "push-2"] });
     expect(calls.map((c) => c.path)).toEqual(["/api/v1/ingest/batch", "/api/v1/ingest/batch"]);
+  });
+});
+
+describe("batches", () => {
+  it("cuts on the count and on the bytes, keeping order", () => {
+    const item = (id: string, size: number) => ({ id, content: "x".repeat(size), timestamp: "2026-01-01T00:00:00.000Z" });
+    const big = PUSH_BYTES / 2 + 1;
+
+    expect(batches([item("a", big), item("b", big), item("c", 1)]).map((b) => b.map((i) => i.id))).toEqual([["a"], ["b", "c"]]);
+    expect(batches([])).toEqual([]);
+    expect(batches(Array.from({ length: PUSH_SIZE * 2 + 1 }, (_, i) => item(`n${i}`, 1))).map((b) => b.length)).toEqual([
+      PUSH_SIZE,
+      PUSH_SIZE,
+      1,
+    ]);
   });
 });
 
