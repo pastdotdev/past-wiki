@@ -262,7 +262,9 @@ interface ApiError {
   error?: { code: string; info: string };
 }
 
-const RETRIES = 4;
+/** Attempts per call. Sites answer 429 in bursts; waiting them out is the whole strategy. */
+const RETRIES = 8;
+const MAX_BACKOFF_MS = 60_000;
 
 async function apiGet<T>(api: string, params: Record<string, string>, options: FetchOptions): Promise<T> {
   const fetchImpl = options.fetch ?? fetch;
@@ -272,9 +274,12 @@ async function apiGet<T>(api: string, params: Record<string, string>, options: F
   }
   let lastError: unknown;
   for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
+    let waitMs = Math.min(MAX_BACKOFF_MS, 2000 * 2 ** (attempt - 1));
     try {
       const response = await fetchImpl(url, { headers: { "User-Agent": options.userAgent ?? DEFAULT_USER_AGENT } });
       if (response.status === 429 || response.status >= 500) {
+        const retryAfter = Number(response.headers.get("retry-after"));
+        if (Number.isFinite(retryAfter) && retryAfter > 0) waitMs = Math.max(waitMs, retryAfter * 1000);
         throw new Error(`${response.status} from ${url.host}`);
       }
       if (!response.ok) {
@@ -286,7 +291,7 @@ async function apiGet<T>(api: string, params: Record<string, string>, options: F
     } catch (error) {
       if (error instanceof NoRetry) throw error;
       lastError = error;
-      if (attempt < RETRIES) await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** (attempt - 1)));
+      if (attempt < RETRIES) await new Promise((resolve) => setTimeout(resolve, waitMs));
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));

@@ -5,7 +5,7 @@
  *
  *   npm run mediawiki -- https://onepiece.fandom.com ./onepiece
  *   npm run mediawiki -- https://en.wikipedia.org ./wp --limit 50   # a taste
- *   npm run mediawiki -- https://onepiece.fandom.com ./onepiece --namespace 0 --concurrency 3
+ *   npm run mediawiki -- https://onepiece.fandom.com ./onepiece --concurrency 1   # a site that answers 429
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -23,7 +23,7 @@ interface Args {
 
 function parseArgs(argv: string[]): Args {
   const positional: string[] = [];
-  const args: Args = { site: "", folder: "", namespace: 0, limit: null, concurrency: 3 };
+  const args: Args = { site: "", folder: "", namespace: 0, limit: null, concurrency: 2 };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index] ?? "";
     if (arg === "--namespace" || arg === "--limit" || arg === "--concurrency") {

@@ -69,7 +69,7 @@ language model keeps straight.
 ```sh
 npm run mediawiki -- https://onepiece.fandom.com ./onepiece            # every article
 npm run mediawiki -- https://en.wikipedia.org ./wp --limit 50          # a taste
-npm run mediawiki -- https://onepiece.fandom.com ./onepiece --concurrency 6
+npm run mediawiki -- https://onepiece.fandom.com ./onepiece --concurrency 1   # gentler on a site that answers 429
 npm run seed -- ./onepiece --no-wait
 ```
 
