@@ -18,30 +18,33 @@ export interface AnswerRequest extends RecallRequest {
   instructions?: string;
 }
 
-export interface RecallExcerpt {
+/** Where a recalled document came from: the pushed data point, quoted where past kept a quote. */
+export interface RecallSource {
+  /** The id the data point was pushed with. */
   sourceId: string;
   occurredAt: string;
-  content: string;
+  /** The data point's metadata as pushed, when it had any. */
+  metadata?: Record<string, unknown>;
+  /** Quotations from the source that back the document. Empty for a source document itself. */
+  excerpts: string[];
 }
 
-export interface RecallDocument {
+/** The memory a recalled document belongs to. */
+export interface RecallArtifact {
   id: string;
-  /** Page-wide rank by relevance, 1 is best. */
-  rank: number;
-  confidence: number | null;
-  occurredAt: string;
-  content: string;
-  sourceId?: string;
-  attributes?: Record<string, string>;
-  excerpts: RecallExcerpt[];
-}
-
-export interface RecallResult {
-  artifactId: string;
-  /** "source", "claim", "state", "episode", "arc", ... */
+  /** "source", "membership", "state", "episode", ... */
   kind: string;
   occurredAt: string;
-  documents: RecallDocument[];
+}
+
+/** One recalled document: the unit of recall, ranked page-wide by relevance (1 is best). */
+export interface RecallResult {
+  id: string;
+  rank: number;
+  occurredAt: string;
+  content: string;
+  artifact: RecallArtifact;
+  sources: RecallSource[];
 }
 
 export interface RecallResponse {

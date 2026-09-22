@@ -1,4 +1,4 @@
-import type { AnswerDisposition, AnswerResponse, RecallExcerpt, RecallResponse } from "@/lib/past/types";
+import type { AnswerDisposition, AnswerResponse, RecallResponse, RecallSource } from "@/lib/past/types";
 
 /** One numbered source on a wiki page. The number is the document's recall rank. */
 export interface WikiSource {
@@ -8,10 +8,8 @@ export interface WikiSource {
   kind: string;
   occurredAt: string;
   content: string;
-  confidence: number | null;
-  sourceId?: string;
-  attributes?: Record<string, string>;
-  excerpts: RecallExcerpt[];
+  /** The data points the document came from, with past's quotations from them. */
+  sources: RecallSource[];
   /** True when the answer explicitly cited this document. Always false in evidence mode. */
   cited: boolean;
 }
@@ -69,22 +67,17 @@ export function pageFromRecall(question: string, askedAt: string, response: Reca
 
 function sourcesFrom(response: RecallResponse, cited: Set<string>): WikiSource[] {
   const sources: WikiSource[] = [];
-  for (const result of response.results) {
-    for (const document of result.documents) {
-      sources.push({
-        number: document.rank,
-        documentId: document.id,
-        artifactId: result.artifactId,
-        kind: result.kind,
-        occurredAt: document.occurredAt,
-        content: document.content,
-        confidence: document.confidence,
-        sourceId: document.sourceId,
-        attributes: document.attributes,
-        excerpts: document.excerpts,
-        cited: cited.has(document.id),
-      });
-    }
+  for (const document of response.results) {
+    sources.push({
+      number: document.rank,
+      documentId: document.id,
+      artifactId: document.artifact.id,
+      kind: document.artifact.kind,
+      occurredAt: document.occurredAt,
+      content: document.content,
+      sources: document.sources,
+      cited: cited.has(document.id),
+    });
   }
   return sources.sort((a, b) => a.number - b.number);
 }

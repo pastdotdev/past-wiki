@@ -8,35 +8,20 @@ const recallPage: RecallResponse = {
   usedEvidenceTokens: 120,
   results: [
     {
-      artifactId: "a1",
-      kind: "state",
+      id: "doc-1",
+      rank: 1,
       occurredAt: "2026-07-28T16:00:00Z",
-      documents: [
-        {
-          id: "doc-1",
-          rank: 1,
-          confidence: 0.9,
-          occurredAt: "2026-07-28T16:00:00Z",
-          content: "The Acme pilot budget is 40k.",
-          excerpts: [{ sourceId: "email-12", occurredAt: "2026-07-28T16:00:00Z", content: "Budget moved to 40k." }],
-        },
-      ],
+      content: "The Acme pilot budget is 40k.",
+      artifact: { id: "a1", kind: "state", occurredAt: "2026-07-28T16:00:00Z" },
+      sources: [{ sourceId: "email-12", occurredAt: "2026-07-28T16:00:00Z", metadata: { title: "Budget email" }, excerpts: ["Budget moved to 40k."] }],
     },
     {
-      artifactId: "a2",
-      kind: "source",
+      id: "doc-2",
+      rank: 2,
       occurredAt: "2026-06-01T09:00:00Z",
-      documents: [
-        {
-          id: "doc-2",
-          rank: 2,
-          confidence: 0.4,
-          occurredAt: "2026-06-01T09:00:00Z",
-          content: "Kickoff notes.",
-          sourceId: "notes-3",
-          excerpts: [],
-        },
-      ],
+      content: "Kickoff notes.",
+      artifact: { id: "a2", kind: "source", occurredAt: "2026-06-01T09:00:00Z" },
+      sources: [{ sourceId: "notes-3", occurredAt: "2026-06-01T09:00:00Z", excerpts: [] }],
     },
   ],
 };

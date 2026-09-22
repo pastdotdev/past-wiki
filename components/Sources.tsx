@@ -1,3 +1,4 @@
+import type { RecallSource } from "@/lib/past/types";
 import type { WikiSource } from "@/lib/wiki/page";
 import { formatDate } from "@/lib/wiki/format";
 
@@ -38,35 +39,26 @@ export function SourceCard({ source }: { source: WikiSource }) {
         <span className="capitalize">{source.kind}</span>
         <span>·</span>
         <time dateTime={source.occurredAt}>{formatDate(source.occurredAt)}</time>
-        {source.confidence !== null && (
-          <span className="ml-auto" title="Relevance to the question">
-            {Math.round(source.confidence * 100)}%
-          </span>
-        )}
       </header>
       <p className="mt-2 whitespace-pre-line leading-relaxed">{source.content}</p>
-      {source.attributes && Object.keys(source.attributes).length > 0 && (
-        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs text-muted">
-          {Object.entries(source.attributes).map(([key, value]) => (
-            <div key={key} className="contents">
-              <dt className="font-medium">{key}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {source.excerpts.length > 0 && (
+      {source.sources.length > 0 && (
         <details className="mt-2 text-xs">
           <summary className="cursor-pointer text-muted">
-            {source.excerpts.length === 1 ? "Original excerpt" : `${source.excerpts.length} original excerpts`}
+            {source.sources.length === 1 && source.sources[0] ? `From ${sourceTitle(source.sources[0])}` : `From ${source.sources.length} data points`}
           </summary>
           <ul className="mt-2 space-y-2 border-l-2 border-rule pl-3">
-            {source.excerpts.map((excerpt, index) => (
-              <li key={index}>
-                <time dateTime={excerpt.occurredAt} className="text-muted">
-                  {formatDate(excerpt.occurredAt)}
-                </time>
-                <p className="mt-0.5 whitespace-pre-line">{excerpt.content}</p>
+            {source.sources.map((origin) => (
+              <li key={origin.sourceId}>
+                <span className="font-medium">{sourceTitle(origin)}</span>
+                <span className="text-muted">
+                  {" · "}
+                  <time dateTime={origin.occurredAt}>{formatDate(origin.occurredAt)}</time>
+                </span>
+                {origin.excerpts.map((excerpt, index) => (
+                  <p key={index} className="mt-0.5 whitespace-pre-line">
+                    {excerpt}
+                  </p>
+                ))}
               </li>
             ))}
           </ul>
@@ -74,4 +66,10 @@ export function SourceCard({ source }: { source: WikiSource }) {
       )}
     </section>
   );
+}
+
+/** The data point's `title` metadata when the pusher set one (the seed does), else its id. */
+function sourceTitle(origin: RecallSource): string {
+  const title = origin.metadata?.title;
+  return typeof title === "string" && title.length > 0 ? title : origin.sourceId;
 }
