@@ -220,6 +220,20 @@ export function notePath(title: string): string {
   return `${cleaned}.md`;
 }
 
+/**
+ * `notePath`, kept distinct from every path already claimed in this export when the file
+ * system folds case ("SWORD" and "Sword" are two articles, one file on macOS). The listing is
+ * in the site's own title order, so the same article gets the suffix every run.
+ */
+export function claimPath(title: string, claimed: Set<string>): string {
+  let path = notePath(title);
+  for (let n = 2; claimed.has(path.toLowerCase()); n += 1) {
+    path = notePath(`${title} (${n})`);
+  }
+  claimed.add(path.toLowerCase());
+  return path;
+}
+
 export interface ExportedNote {
   path: string;
   text: string;

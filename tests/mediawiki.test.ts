@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { exportedRevision, listPages, notePath, resolveSite, toMarkdown, toNote, type WikiSite } from "@/lib/wiki/mediawiki";
+import { claimPath, exportedRevision, listPages, notePath, resolveSite, toMarkdown, toNote, type WikiSite } from "@/lib/wiki/mediawiki";
 
 const SITE: WikiSite = { api: "https://wiki.example/api.php", articleBase: "https://wiki.example/wiki/", name: "Example" };
 
@@ -64,6 +64,13 @@ describe("notePath / toNote / exportedRevision", () => {
     expect(notePath("Monkey D. Luffy/History/Non-Canon")).toBe("Monkey D. Luffy/History/Non-Canon.md");
     expect(notePath('Who: "What"? *')).toBe("Who_ _What__ _.md");
     expect(notePath("../x")).toBe("_/x.md");
+  });
+
+  it("keeps two titles apart when the file system folds case", () => {
+    const claimed = new Set<string>();
+    expect(claimPath("SWORD", claimed)).toBe("SWORD.md");
+    expect(claimPath("Sword", claimed)).toBe("Sword (2).md");
+    expect(claimPath("Sword", claimed)).toBe("Sword (3).md");
   });
 
   it("writes the front matter the seed reads and the revision the next export checks", () => {

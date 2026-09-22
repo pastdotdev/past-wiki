@@ -11,7 +11,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { exportedRevision, listPages, notePath, renderPage, resolveSite, toNote, type PageRef, type WikiSite } from "@/lib/wiki/mediawiki";
+import { claimPath, exportedRevision, listPages, renderPage, resolveSite, toNote, type PageRef, type WikiSite } from "@/lib/wiki/mediawiki";
 
 interface Args {
   site: string;
@@ -61,15 +61,16 @@ async function currentRevision(file: string): Promise<number | null> {
   }
 }
 
-async function exportPage(site: WikiSite, root: string, page: PageRef, tally: Tally): Promise<void> {
-  const target = path.join(root, notePath(page.title));
+async function exportPage(site: WikiSite, root: string, page: PageRef, tally: Tally, claimed: Set<string>): Promise<void> {
+  const notePath = claimPath(page.title, claimed);
+  const target = path.join(root, notePath);
   if ((await currentRevision(target)) === page.revision) {
     tally.skipped += 1;
     return;
   }
   try {
     const rendered = await renderPage(site, page.title);
-    const written = toNote(site, page, rendered);
+    const written = { ...toNote(site, page, rendered), path: notePath };
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, written.text, "utf8");
     tally.written += 1;
@@ -88,6 +89,7 @@ async function main(): Promise<void> {
   await mkdir(root, { recursive: true });
 
   const tally: Tally = { written: 0, skipped: 0, failed: 0, bytes: 0 };
+  const claimed = new Set<string>();
   let listed = 0;
   const started = Date.now();
   const report = (): void => {
@@ -103,7 +105,7 @@ async function main(): Promise<void> {
       const remaining = args.limit === null ? slice.length : Math.max(0, args.limit - listed);
       const pages = slice.slice(0, remaining);
       listed += pages.length;
-      await Promise.all(pages.map((page) => exportPage(site, root, page, tally)));
+      await Promise.all(pages.map((page) => exportPage(site, root, page, tally, claimed)));
       report();
       if (args.limit !== null && listed >= args.limit) break outer;
     }
