@@ -70,6 +70,7 @@ export function SourceCard({ source }: { source: WikiSource }) {
 
 /** The data point's `title` metadata when the pusher set one (the seed does), else its id. */
 function sourceTitle(origin: RecallSource): string {
-  const title = origin.metadata?.title;
+  const metadata = origin.metadata;
+  const title = typeof metadata === "object" && metadata !== null && "title" in metadata ? metadata.title : undefined;
   return typeof title === "string" && title.length > 0 ? title : origin.sourceId;
 }

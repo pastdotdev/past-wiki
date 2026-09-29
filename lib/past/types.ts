@@ -14,17 +14,14 @@ export interface RecallRequest {
   sort?: "relevance" | "chronological";
 }
 
-export interface AnswerRequest extends RecallRequest {
-  instructions?: string;
-}
-
 /** Where a recalled document came from: the pushed data point, quoted where past kept a quote. */
 export interface RecallSource {
   /** The id the data point was pushed with. */
   sourceId: string;
   occurredAt: string;
   /** The data point's metadata as pushed, when it had any. */
-  metadata?: Record<string, unknown>;
+  metadata?: unknown;
+  label?: string;
   /** Quotations from the source that back the document. Empty for a source document itself. */
   excerpts: string[];
 }
@@ -35,6 +32,7 @@ export interface RecallArtifact {
   /** "source", "membership", "state", "episode", ... */
   kind: string;
   occurredAt: string;
+  supersededAt?: string;
 }
 
 /** One recalled document: the unit of recall, ranked page-wide by relevance (1 is best). */
@@ -51,22 +49,6 @@ export interface RecallResponse {
   asOf: string;
   usedEvidenceTokens: number;
   results: RecallResult[];
-}
-
-export type AnswerDisposition = "answered" | "abstained" | "clarification_required";
-
-export interface AnswerCitation {
-  documentId: string;
-  sourceIds: string[];
-}
-
-export interface AnswerResponse extends RecallResponse {
-  answer: string;
-  disposition: AnswerDisposition;
-  citations: AnswerCitation[];
-  answerer: { model: string };
-  usage: { totalTokens: number; costUsd: number };
-  timings: { recallMs: number; answerMs: number; totalMs: number };
 }
 
 /**
@@ -106,7 +88,8 @@ export interface IngestionStatus {
   /** True once every point of the push is fully processed and readable. */
   settled: boolean;
   blocked: boolean;
-  readiness: { raw: number; comprehension: number; consolidation: number; parked: number };
+  failure?: { code: string; message: string } | null;
+  readiness: { raw: number; comprehension: number; consolidation: number; failed: number };
 }
 
 /** Every refusal from the API has this body. */
@@ -114,4 +97,5 @@ export interface ApiErrorBody {
   code: string;
   status: number;
   message?: string;
+  debugMessage?: string;
 }

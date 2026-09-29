@@ -1,6 +1,4 @@
 import type {
-  AnswerRequest,
-  AnswerResponse,
   ApiErrorBody,
   IngestBatchRequest,
   IngestBatchResponse,
@@ -14,7 +12,7 @@ export class PastApiError extends Error {
   readonly code: string;
 
   constructor(status: number, body: ApiErrorBody | null) {
-    super(body?.message ?? `past.dev API responded ${status}`);
+    super(body?.debugMessage ?? body?.message ?? `past.dev API responded ${status}`);
     this.name = "PastApiError";
     this.status = status;
     this.code = body?.code ?? "unknown";
@@ -50,10 +48,6 @@ export class PastClient {
 
   recall(request: RecallRequest): Promise<RecallResponse> {
     return this.post<RecallResponse>("/api/v1/recall", request);
-  }
-
-  answer(request: AnswerRequest): Promise<AnswerResponse> {
-    return this.post<AnswerResponse>("/api/v1/answer", request);
   }
 
   /** One ordered push of 1 to 1,000 items. */

@@ -1,4 +1,5 @@
-import type { AnswerDisposition, AnswerResponse, RecallResponse, RecallSource } from "@/lib/past/types";
+import type { AnswerDisposition, GeneratedAnswer } from "./answer";
+import type { RecallResponse, RecallSource } from "@/lib/past/types";
 
 /** One numbered source on a wiki page. The number is the document's recall rank. */
 export interface WikiSource {
@@ -23,8 +24,8 @@ export interface WikiArticle {
 /**
  * A page is one question and what past knows about it.
  *
- * `mode` says who wrote the body: "answer" when the server's answerer produced an article,
- * "evidence" when the deployment has no answerer and the page is the ranked evidence itself.
+ * `mode` says who wrote the body: "answer" when the application's model produced an article,
+ * "evidence" when generation is unavailable and the page is the ranked evidence itself.
  */
 export interface WikiPage {
   question: string;
@@ -36,17 +37,17 @@ export interface WikiPage {
   usedEvidenceTokens: number;
 }
 
-export function pageFromAnswer(question: string, askedAt: string, response: AnswerResponse): WikiPage {
-  const cited = new Set(response.citations.map((citation) => citation.documentId));
+export function pageFromAnswer(question: string, askedAt: string, response: RecallResponse, answer: GeneratedAnswer): WikiPage {
+  const cited = answer.citedDocumentIds;
   return {
     question,
     askedAt,
     asOf: response.asOf,
     mode: "answer",
     article: {
-      text: response.answer,
-      disposition: response.disposition,
-      model: response.answerer.model,
+      text: answer.text,
+      disposition: answer.disposition,
+      model: answer.model,
     },
     sources: sourcesFrom(response, cited),
     usedEvidenceTokens: response.usedEvidenceTokens,

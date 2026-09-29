@@ -136,7 +136,7 @@ export interface WaitOptions {
 
 /**
  * Resolves once every push is settled, which is when its points are readable through
- * /recall and /answer. Throws on timeout or when past reports a push as blocked.
+ * /recall. Throws on timeout or when past reports a push as blocked.
  */
 export async function waitSettled(
   client: PastClient,
@@ -151,6 +151,7 @@ export async function waitSettled(
   while (pending.size > 0) {
     for (const id of [...pending]) {
       const status = await client.ingestion(id);
+      if (status.status === "failed") throw new Error(`push ${id} failed: ${status.failure?.message ?? "reason unavailable"}`);
       if (status.blocked) throw new Error(`push ${id} is blocked (${status.status})`);
       if (status.settled) pending.delete(id);
     }

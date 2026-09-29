@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PastApiError, PastClient } from "@/lib/past/client";
-import type { AnswerResponse, RecallResponse } from "@/lib/past/types";
+import type { RecallResponse } from "@/lib/past/types";
 import { ask } from "@/lib/wiki/ask";
 
 const recallPage: RecallResponse = {
@@ -26,15 +26,10 @@ const recallPage: RecallResponse = {
   ],
 };
 
-const answerPage: AnswerResponse = {
-  ...recallPage,
-  answer: "The budget is 40k d1.",
-  disposition: "answered",
-  citations: [{ documentId: "doc-1", sourceIds: ["email-12"] }],
-  answerer: { model: "test-model" },
-  usage: { totalTokens: 10, costUsd: 0 },
-  timings: { recallMs: 1, answerMs: 1, totalMs: 2 },
-};
+const answerer = async () => ({
+  text: "The budget is 40k d1.", disposition: "answered" as const, model: "test-model",
+  citedDocumentIds: new Set(["doc-1"]),
+});
 
 interface Call {
   path: string;
@@ -64,10 +59,10 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 describe("ask", () => {
-  it("writes the article from /answer and marks cited sources", async () => {
-    const { client, calls } = fakePast({ "/api/v1/answer": () => json(answerPage) });
+  it("recalls evidence before generating an article and marking citations", async () => {
+    const { client, calls } = fakePast({ "/api/v1/recall": () => json(recallPage) });
 
-    const page = await ask(client, "what is the budget?", { identity: "wiki", now: () => new Date("2026-09-08T10:00:00Z") });
+    const page = await ask(client, "what is the budget?", { identity: "wiki", answerer, now: () => new Date("2026-09-08T10:00:00Z") });
 
     expect(page.mode).toBe("answer");
     expect(page.article?.text).toBe("The budget is 40k d1.");
@@ -79,39 +74,47 @@ describe("ask", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.authorization).toBe("Bearer past_sk_org_secret");
     expect(calls[0]?.body).toMatchObject({ query: "what is the budget?", identity: "wiki" });
-    expect(typeof calls[0]?.body.instructions).toBe("string");
+    expect(calls[0]?.path).toBe("/api/v1/recall");
+    expect(calls[0]?.body).not.toHaveProperty("instructions");
   });
 
-  it("falls back to /recall when the deployment has no answerer", async () => {
+  it("shows evidence directly when no app-side model is configured", async () => {
     const { client, calls } = fakePast({
-      "/api/v1/answer": () => json({ code: "answerer-not-configured", status: 503 }, 503),
       "/api/v1/recall": () => json(recallPage),
     });
 
-    const page = await ask(client, "what is the budget?", { identity: "wiki" });
+    const page = await ask(client, "what is the budget?", { identity: "wiki", answerer: null });
 
     expect(page.mode).toBe("evidence");
     expect(page.article).toBeNull();
     expect(page.sources.map((source) => source.number)).toEqual([1, 2]);
     expect(page.sources.every((source) => !source.cited)).toBe(true);
-    expect(calls.map((call) => call.path)).toEqual(["/api/v1/answer", "/api/v1/recall"]);
-    expect(calls[1]?.body).not.toHaveProperty("instructions");
+    expect(calls.map((call) => call.path)).toEqual(["/api/v1/recall"]);
+    expect(calls[0]?.body).not.toHaveProperty("instructions");
+  });
+
+  it("keeps evidence readable when the model fails", async () => {
+    const { client, calls } = fakePast({ "/api/v1/recall": () => json(recallPage) });
+    const page = await ask(client, "budget?", { identity: "wiki", answerer: async () => { throw new Error("unavailable"); } });
+    expect(page.mode).toBe("evidence");
+    expect(page.sources).toHaveLength(2);
+    expect(calls.map((call) => call.path)).toEqual(["/api/v1/recall"]);
   });
 
   it("passes the as-of instant through unchanged", async () => {
-    const { client, calls } = fakePast({ "/api/v1/answer": () => json(answerPage) });
+    const { client, calls } = fakePast({ "/api/v1/recall": () => json(recallPage) });
 
-    await ask(client, "budget?", { identity: "wiki", asOf: "2026-07-01T00:00:00Z" });
+    await ask(client, "budget?", { identity: "wiki", answerer: null, asOf: "2026-07-01T00:00:00Z" });
 
     expect(calls[0]?.body.queryTimestamp).toBe("2026-07-01T00:00:00Z");
   });
 
   it("surfaces every other refusal as a PastApiError with its code", async () => {
     const { client } = fakePast({
-      "/api/v1/answer": () => json({ code: "unauthorized", status: 401, message: "bad key" }, 401),
+      "/api/v1/recall": () => json({ code: "unauthorized", status: 401, debugMessage: "bad key" }, 401),
     });
 
-    await expect(ask(client, "budget?", { identity: "wiki" })).rejects.toMatchObject({
+    await expect(ask(client, "budget?", { identity: "wiki", answerer: null })).rejects.toMatchObject({
       name: "PastApiError",
       status: 401,
       code: "unauthorized",
@@ -121,9 +124,9 @@ describe("ask", () => {
 
   it("still reports the status when the error body is not JSON", async () => {
     const { client } = fakePast({
-      "/api/v1/answer": () => new Response("<html>bad gateway</html>", { status: 502 }),
+      "/api/v1/recall": () => new Response("<html>bad gateway</html>", { status: 502 }),
     });
 
-    await expect(ask(client, "budget?", { identity: "wiki" })).rejects.toMatchObject({ status: 502, code: "unknown" });
+    await expect(ask(client, "budget?", { identity: "wiki", answerer: null })).rejects.toMatchObject({ status: 502, code: "unknown" });
   });
 });

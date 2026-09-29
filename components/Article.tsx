@@ -59,12 +59,12 @@ function Disposition({ disposition }: { disposition: "abstained" | "clarificatio
   return <p className="mt-4 rounded border border-rule bg-white px-4 py-3 text-sm text-muted">{text}</p>;
 }
 
-/** Without an answerer on the server, the page is the ranked evidence itself. */
+/** Without an available application-side model, the page is the ranked evidence itself. */
 function EvidenceBody({ page }: { page: WikiPage }) {
   return (
     <div className="mt-6">
       <p className="mb-6 rounded border border-rule bg-white px-4 py-3 text-sm text-muted">
-        This past deployment has no answer model configured, so the wiki shows the evidence it
+        Article generation is unavailable, so the wiki shows the evidence it
         found, best match first, instead of a written article.
       </p>
       <div className="space-y-4">

@@ -84,7 +84,7 @@ function fakePast(settledAfter = 1) {
       status: "processing",
       settled: reads > settledAfter,
       blocked: false,
-      readiness: { raw: 0, comprehension: 0, consolidation: 0, parked: 0 },
+      readiness: { raw: 0, comprehension: 0, consolidation: 0, failed: 0 },
     });
   };
   return { calls, client: new PastClient({ apiKey: "past_sk_test", baseUrl: "https://past.example", fetch: fetchImpl }) };
@@ -130,6 +130,13 @@ describe("waitSettled", () => {
 
     expect(calls.filter((c) => c.method === "GET")).toHaveLength(3);
     expect(slept).toEqual([10, 10]);
+  });
+
+  it("stops immediately when a send fails even if the project is not blocked", async () => {
+    const client = new PastClient({ apiKey: "test", baseUrl: "https://past.example", fetch: async () =>
+      Response.json({ status: "failed", settled: false, blocked: false, failure: { code: "model-unavailable", message: "Model unavailable" } }) });
+    await expect(waitSettled(client, ["failed-push"], { sleep: async () => { throw new Error("should not poll again"); } }))
+      .rejects.toThrow("Model unavailable");
   });
 
   it("gives up after the timeout", async () => {

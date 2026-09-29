@@ -97,29 +97,30 @@ every edit is one workflow run away from the wiki.
 ```text
 browser ──POST /api/ask {question}──▶ Next.js route
                                         │
-                                        ├─▶ POST {PAST_BASE_URL}/api/v1/answer
-                                        │     article + citations + ranked evidence
+                                        ├─▶ POST /api/v1/recall
+                                        │     ranked evidence + dated sources
                                         │
-                                        └─▶ on 503 answerer-not-configured:
-                                              POST /api/v1/recall
-                                              ranked evidence only
+                                        └─▶ optional OpenRouter model call
+                                              article + citations
 ```
 
-- `/answer` returns a written answer, the documents it cited, and the full recall page that
-  grounded it. The wiki renders the answer as the article and the page as numbered sources.
-  Citations in the text (`d3`) become superscript links to source 3.
-- A self-hosted past without an answer model refuses `/answer`. The wiki notices and serves
-  the recall evidence as the page body instead, so it works on every deployment.
-- Sources are numbered by their recall rank. Cited ones are listed first and tinted; the rest
-  appear under "Also found". Each card can unfold the verbatim excerpts it derives from.
+- The app retrieves evidence through the public `/recall` endpoint. It does not use an
+  answer endpoint on the past API.
+- Set `OPENROUTER_API_KEY` to write articles from that evidence. `OPENROUTER_MODEL` optionally
+  chooses the model; otherwise OpenRouter uses your account default. Choose a model supporting
+  structured outputs. Generation sends the question and recalled evidence to OpenRouter and
+  is billed separately from past. The key stays on the server.
+- Without a model key, with no evidence, or if generation fails, the wiki displays ranked
+  evidence directly. Citations (`d3`) link to source 3; unknown citations are rejected.
+- Sources are numbered by recall rank and include their dated quotations.
 - The question lives in the URL (`/?q=...`), so a page is a link you can send. The sidebar is
   the list of questions this browser asked, kept in localStorage.
 
 ## Deploy it
 
-It is a stock Next.js app: anything that runs `next build` and `next start` with the four
-environment variables above will do. The only secret is `PAST_API_KEY`, and it is only read
-on the server.
+It is a stock Next.js app: anything that runs `next build` and `next start` with the
+environment variables above will do. `PAST_API_KEY` and the optional `OPENROUTER_API_KEY`
+are read only on the server.
 
 ## Develop
 
@@ -140,8 +141,8 @@ app/
   page.tsx            # the one screen
   api/ask/route.ts    # the one server route (holds the key)
 components/           # Wiki (state + URL), AskBar, Sidebar, Article, Sources
-lib/past/             # typed client for /answer, /recall and /ingest/batch
-lib/wiki/             # ask (answer-or-evidence), page model, history, config, seed, mediawiki
+lib/past/             # typed client for /recall and /ingest/batch
+lib/wiki/             # ask, optional app-side answer generation, page model, history, config, seed, mediawiki
 scripts/seed.ts       # npm run seed
 scripts/mediawiki.ts  # npm run mediawiki
 sample/               # notes to seed a fresh project with
